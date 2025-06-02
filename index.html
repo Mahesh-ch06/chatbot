@@ -188,9 +188,9 @@
                                 console.error("Error during automated sign-in:", error);
                                 showAuthNotification(`Sign-in failed: ${error.message}. You may be redirected to the login page if this persists.`, true);
                                 // Optional: Redirect after a delay if sign-in fails critically
-                                // setTimeout(() => {
-                                //     window.location.href = "YOUR_LOGIN_PAGE_URL";
-                                // }, 4000);
+                                setTimeout(() => {
+                                    window.location.href = "https://mahesh06.me/demo2/";
+                                }, 4000);
                             }
                         })();
                     } else { // User is authenticated
