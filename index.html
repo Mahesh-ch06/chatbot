@@ -1,41 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chitikeshi Mahesh - Portfolio</title>
-    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        /* Custom scrollbar for chat messages */
+        #chatbot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #chatbot-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #chatbot-messages::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        #chatbot-messages::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
-    <!-- Your existing portfolio content goes here -->
-    <h1>Chitikeshi Mahesh's Portfolio</h1>
-    <p>Welcome to my site. Ask my bot for more info!</p>
-    <!-- ... more content ... -->
+<body class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
 
+    <div class="text-center p-8 max-w-2xl mx-auto">
+        <img src="https://placehold.co/120x120/FFFFFF/000000?text=CM" alt="Chitikeshi Mahesh" class="w-32 h-32 rounded-full mx-auto mb-6 border-4 border-sky-500 shadow-lg">
+        <h1 class="text-4xl md:text-5xl font-bold mb-3 text-sky-400">Chitikeshi Mahesh</h1>
+        <p class="text-lg md:text-xl text-slate-300 mb-8">
+            B.Tech CSE (AI & ML) Student | SR University
+        </p>
+        <p class="text-md text-slate-400">
+            Welcome to my digital space! Curious about my skills, projects, or achievements?
+            Ask my AI assistant in the chat window below.
+        </p>
+    </div>
 
-    <!-- Chatbot Widget -->
-    <div id="chatbot-widget">
-        <div id="chatbot-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="30px" height="30px">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-                <path d="M0 0h24v24H0z" fill="none"/>
+    <div id="chatbot-widget" class="fixed bottom-5 right-5 z-50">
+        <div id="chatbot-icon" class="bg-sky-500 hover:bg-sky-600 text-white w-16 h-16 rounded-full flex items-center justify-center cursor-pointer shadow-xl transition-transform hover:scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25S3.75 16.556 3.75 12s3.86-8.25 8.625-8.25S21 7.444 21 12z" />
             </svg>
         </div>
-        <div id="chatbot-box">
-            <div class="chatbot-header">
-                <span>Mahesh's Bot</span>
-                <button id="chatbot-close-btn">×</button>
+
+        <div id="chatbot-box" class="hidden fixed bottom-24 right-5 w-full max-w-md h-[70vh] max-h-[550px] bg-white text-slate-800 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300 fade-in">
+            <div class="bg-sky-500 text-white p-4 flex justify-between items-center">
+                <h3 class="font-semibold text-lg">Portfolio Assistant</h3>
+                <button id="chatbot-close-btn" class="text-white hover:text-sky-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-            <div id="chatbot-messages">
-                <!-- Chat messages will appear here -->
-            </div>
-            <div class="chatbot-input-area">
-                <input type="text" id="chatbot-input" placeholder="Ask me something...">
-                <button id="chatbot-send-btn">Send</button>
+
+            <div id="chatbot-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50">
+                </div>
+
+            <div class="p-3 border-t border-slate-200 bg-white">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="chatbot-input" placeholder="Ask about skills, projects..." class="flex-1 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-shadow" />
+                    <button id="chatbot-send-btn" class="bg-sky-500 hover:bg-sky-600 text-white p-3 rounded-lg transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const chatbotIcon = document.getElementById("chatbot-icon");
+        const chatbotBox = document.getElementById("chatbot-box");
+        const chatbotCloseBtn = document.getElementById("chatbot-close-btn");
+        const chatbotMessages = document.getElementById("chatbot-messages");
+        const chatbotInput = document.getElementById("chatbot-input");
+        const chatbotSendBtn = document.getElementById("chatbot-send-btn");
+
+        // Information about Chitikeshi Mahesh (This will be used to inform the AI)
+        const maheshInfo = {
+            name: "Chitikeshi Mahesh",
+            role: "B.Tech CSE (AI & ML) student at SR University.",
+            introduction: "Chitikeshi Mahesh is a dedicated and aspiring software developer with a strong foundation in Computer Science, specializing in Artificial Intelligence and Machine Learning. He is passionate about leveraging technology to solve real-world problems and continuously seeks to expand his knowledge and skills.",
+            skills: [
+                "Python", "Java", "C++",
+                "Web Development (HTML, CSS, JavaScript, React.js, Node.js)",
+                "Data Structures and Algorithms (DSA)",
+                "Machine Learning (Scikit-learn, TensorFlow, Keras)",
+                "Deep Learning",
+                "Database Management (SQL, MongoDB)",
+                "Version Control (Git, GitHub)",
+                "Problem Solving"
+            ],
+            projects: [
+                { name: "Personal Portfolio Website", description: "Developed a dynamic personal portfolio website (this one!) to showcase skills, projects, and achievements, featuring an AI-powered chatbot for interactive user engagement." },
+                { name: "DSA Resource Hub", description: "Created a comprehensive web platform offering curated resources, tutorials, and practice problems for Data Structures and Algorithms, aimed at helping students learn and prepare for technical interviews." },
+                { name: "Intelligent Diary Web Application", description: "Built a web application that allows users to maintain a personal diary with features like sentiment analysis on entries and smart tagging for organization." },
+                { name: "E-commerce Price Tracker", description: "Developed a tool that tracks prices of products on various e-commerce sites and notifies users of price drops." }
+            ],
+            achievements: [
+                "Secured 2nd place in Anveshan Hackathon for an innovative AI-based project.",
+                "Received Academic Excellence Award for outstanding performance in university.",
+                "Project recognized at the University Innovation Expo for its practical application and technical sophistication.",
+                "Consistently ranked among top 5% of students in the department."
+            ],
+            contact: {
+                email: "chitikeshimahesh6@gmail.com",
+                linkedin: "https://www.linkedin.com/in/chitikeshimahesh/",
+                github: "https://github.com/chitikeshimahesh"
+            },
+            aspirations: "Aspires to contribute to cutting-edge AI research and develop impactful software solutions that can make a difference. Keen on exploring roles in software engineering, machine learning, and data science."
+        };
+
+        function getGreetingMessage() {
+            const hr = new Date().getHours();
+            if (hr < 12) return "Good morning! 👋 I'm Portfolio Assistant. How can I help you learn more about Mahesh today?";
+            if (hr < 18) return "Good afternoon! 👋 I'm Portfolio Assistant. How can I assist you in finding out about Mahesh?";
+            return "Good evening! 👋 I'm Portfolio Assistant. What would you like to know about Mahesh?";
+        }
+
+        function toggleChat() {
+            const isOpen = chatbotBox.classList.toggle("hidden");
+            chatbotIcon.style.display = isOpen ? "flex" : "none"; 
+             if (!isOpen) { 
+                chatbotBox.classList.remove("hidden");
+                chatbotIcon.style.display = "none";
+                if (chatbotMessages.children.length === 0) { 
+                    addMessage(getGreetingMessage(), "bot");
+                }
+            } else { 
+                chatbotBox.classList.add("hidden");
+                chatbotIcon.style.display = "flex";
+            }
+        }
+
+        function addMessage(msg, sender = "bot", isLoading = false) {
+            const div = document.createElement("div");
+            div.className = `chat-message p-3 rounded-xl max-w-[85%] break-words ${isLoading ? 'italic text-slate-500' : ''}`;
+            
+            if (sender === "user") {
+                div.classList.add("bg-sky-500", "text-white", "self-end", "rounded-br-none");
+            } else {
+                div.classList.add("bg-slate-200", "text-slate-700", "self-start", "rounded-bl-none");
+            }
+            
+            if (sender === "bot" && !isLoading) {
+                const sanitizedMsg = msg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") 
+                                       .replace(/<(?!\/?(a|ul|li|strong|em|br)(?=>|\s.*>))\/?.*?>/gi, ""); 
+                div.innerHTML = sanitizedMsg; 
+            } else {
+                 div.textContent = msg;
+            }
+
+            chatbotMessages.appendChild(div);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            return div;
+        }
+        
+        let typingIndicatorElement = null;
+
+        function showTypingIndicator() {
+            if (typingIndicatorElement) typingIndicatorElement.remove(); 
+            typingIndicatorElement = addMessage("Portfolio Assistant is thinking...", "bot", true);
+        }
+
+        function removeTypingIndicator() {
+            if (typingIndicatorElement) {
+                typingIndicatorElement.remove();
+                typingIndicatorElement = null;
+            }
+        }
+
+        async function getBotResponse(userInput) {
+            showTypingIndicator();
+
+            let prompt = `You are "Portfolio Assistant", a highly professional and helpful AI assistant for Chitikeshi Mahesh's portfolio.
+            Your goal is to provide concise, informative, and engaging answers about him.
+            You should maintain a polite and professional tone.
+            Use the information provided below about Chitikeshi Mahesh to answer the user's query.
+            If the query is unclear or not related to Mahesh, politely state that you can only provide information about him.
+            Keep your answers to a maximum of 3-4 sentences unless a list is appropriate (like for skills or projects).
+            When mentioning projects or skills, you can list them.
+            When providing contact information, list all available methods.
+
+            Information about Chitikeshi Mahesh:
+            Name: ${maheshInfo.name}
+            Role: ${maheshInfo.role}
+            Introduction: ${maheshInfo.introduction}
+            Skills: ${maheshInfo.skills.join(", ")}.
+            Projects: ${maheshInfo.projects.map(p => `${p.name} - ${p.description}`).join("; ")}.
+            Achievements: ${maheshInfo.achievements.join(". ")}.
+            Contact: Email - ${maheshInfo.contact.email}, LinkedIn - ${maheshInfo.contact.linkedin}, GitHub - ${maheshInfo.contact.github}.
+            Aspirations: ${maheshInfo.aspirations}
+
+            User's query: "${userInput}"
+
+            Based on this information and the user's query, provide a helpful and professional response.
+            If the user asks for "projects", list a few key projects with brief descriptions.
+            If the user asks for "skills", list key skills.
+            If the user asks for "contact", provide all contact details clearly, making sure email is a mailto link and LinkedIn/GitHub are clickable links (e.g., <a href='LINK' target='_blank'>TEXT</a>).
+            If the user says "hi", "hello", or "who are you", respond with a brief introduction of yourself as Portfolio Assistant and offer help.
+            If the query is very generic or seems like small talk beyond a greeting, try to gently steer the conversation back to Mahesh's professional profile.
+            For example, if the user says "how are you?", you can say "I'm functioning optimally, ready to tell you more about Mahesh! What are you interested in?"
+            `;
+
+            const lowerInput = userInput.toLowerCase();
+            if (lowerInput.includes("project")) {
+                prompt += "\nPlease focus on Mahesh's projects in your response, perhaps listing 2-3 with their descriptions.";
+            } else if (lowerInput.includes("skill")) {
+                prompt += "\nPlease highlight Mahesh's key skills.";
+            } else if (lowerInput.includes("contact") || lowerInput.includes("email") || lowerInput.includes("linkedin")) {
+                prompt += "\nPlease provide Mahesh's contact information, ensuring links are active.";
+            } else if (lowerInput.includes("who are you") || lowerInput.match(/\b(hi|hello|hey)\b/i)) {
+                 prompt = `You are "Portfolio Assistant". The user said: "${userInput}". Respond with a friendly greeting and offer to provide information about Mahesh.`;
+            }
+
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                removeTypingIndicator();
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("API Error:", errorData);
+                    addMessage("My apologies, I'm having a little trouble connecting right now. Please try again in a moment.", "bot");
+                    return;
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    let botText = result.candidates[0].content.parts[0].text;
+                    botText = botText.replace(/ (https?:\/\/[^\s]+)/g, ' <a href="$1" target="_blank">$1</a>');
+                    botText = botText.replace(/<([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)>/g, '<a href="mailto:$1">$1</a>');
+
+                    addMessage(botText, "bot");
+                } else {
+                    console.error("Unexpected API response structure:", result);
+                    addMessage("I received an unusual response. Could you try rephrasing your question?", "bot");
+                }
+
+            } catch (error) {
+                removeTypingIndicator();
+                console.error("Error fetching bot response:", error);
+                addMessage("Sorry, I encountered an error. Please try asking again.", "bot");
+            }
+        }
+
+        function handleSend() {
+            const userMsg = chatbotInput.value.trim();
+            if (!userMsg) return;
+
+            addMessage(userMsg, "user");
+            chatbotInput.value = "";
+            chatbotInput.focus();
+
+            getBotResponse(userMsg);
+        }
+
+        chatbotIcon.addEventListener("click", toggleChat);
+        chatbotCloseBtn.addEventListener("click", toggleChat);
+        chatbotSendBtn.addEventListener("click", handleSend);
+        chatbotInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault(); 
+                handleSend();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && !chatbotBox.classList.contains("hidden")) {
+                toggleChat();
+            }
+        });
+    });
+    </script>
 </body>
 </html>
