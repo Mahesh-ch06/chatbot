@@ -33,6 +33,11 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* Styles for the auth notification */
+        #auth-notification-popup {
+            /* Ensures it's above other content, including the chatbot icon if it were visible */
+            z-index: 10000; 
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
@@ -81,6 +86,91 @@
             </div>
         </div>
     </div>
+
+    <script type="module">
+        // Firebase SDK imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+        // Firebase configuration (as provided by user)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1iij4QWlxQJJPS-yJrhSiCS79kS4dqaM", // IMPORTANT: Keep API keys secure and consider environment variables for production.
+            authDomain: "portfolio-56be7.firebaseapp.com",
+            projectId: "portfolio-56be7",
+            storageBucket: "portfolio-56be7.firebasestorage.app",
+            messagingSenderId: "888511551571",
+            appId: "1:888511551571:web:11e809e995377e9a4ccea6",
+            measurementId: "G-X3CYL9YZR1"
+        };
+
+        // Initialize Firebase app
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Function to display a custom styled notification
+        function showAuthNotification(message) {
+            const notificationId = 'auth-notification-popup';
+            let notificationDiv = document.getElementById(notificationId);
+
+            // Avoid creating multiple popups if function is somehow called again before redirect
+            if (notificationDiv) return; 
+
+            notificationDiv = document.createElement('div');
+            notificationDiv.id = notificationId;
+            // Tailwind classes for styling the overlay and message box
+            notificationDiv.className = 'fixed inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center p-6'; // z-index is handled by inline style for override
+            
+            const messageBox = document.createElement('div');
+            messageBox.className = 'bg-white p-8 rounded-xl shadow-2xl text-slate-800 max-w-lg text-center transform transition-all scale-95 opacity-0 animate-fadeInUp';
+            messageBox.innerHTML = `
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-6">
+                    <svg class="h-8 w-8 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-sky-700 mb-3">Authentication Required</h2>
+                <p class="text-md text-slate-600 mb-5">${message}</p>
+                <p class="text-sm text-slate-500 animate-pulse">Redirecting you to the login page shortly...</p>
+            `;
+            
+            // Simple animation for the box
+            const styleSheet = document.createElement("style");
+            styleSheet.type = "text/css";
+            styleSheet.innerText = `
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.95); }
+                    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+                }
+                .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
+            `;
+            document.head.appendChild(styleSheet);
+            
+            notificationDiv.appendChild(messageBox);
+            document.body.appendChild(notificationDiv);
+        }
+
+        // Firebase authentication state listener
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                // User is not logged in
+                console.log("User not authenticated. Redirecting to login page.");
+                showAuthNotification("Please log in or create an account to access this portfolio page.");
+                
+                // Delay redirection slightly to allow user to see the message
+                setTimeout(() => {
+                    window.location.href = "https://mahesh06.me/demo2/";
+                }, 3000); // 3-second delay
+            } else {
+                // User is logged in
+                console.log("User authenticated:", user.uid);
+                // You can optionally remove the notification if it was somehow shown
+                const notificationDiv = document.getElementById('auth-notification-popup');
+                if (notificationDiv) {
+                    notificationDiv.remove();
+                }
+            }
+        });
+    </script>
 
     <script>
     document.addEventListener("DOMContentLoaded", () => {
@@ -134,15 +224,14 @@
         }
 
         function toggleChat() {
-            const isOpen = chatbotBox.classList.toggle("hidden");
-            chatbotIcon.style.display = isOpen ? "flex" : "none"; 
-             if (!isOpen) { 
+            const isChatBoxHidden = chatbotBox.classList.contains("hidden");
+            if (isChatBoxHidden) {
                 chatbotBox.classList.remove("hidden");
                 chatbotIcon.style.display = "none";
                 if (chatbotMessages.children.length === 0) { 
                     addMessage(getGreetingMessage(), "bot");
                 }
-            } else { 
+            } else {
                 chatbotBox.classList.add("hidden");
                 chatbotIcon.style.display = "flex";
             }
@@ -159,11 +248,12 @@
             }
             
             if (sender === "bot" && !isLoading) {
+                // Basic sanitization for HTML content from bot
                 const sanitizedMsg = msg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") 
-                                       .replace(/<(?!\/?(a|ul|li|strong|em|br)(?=>|\s.*>))\/?.*?>/gi, ""); 
+                                       .replace(/<(?!\/?(a|ul|li|strong|em|br|p|div|span)(?=>|\s.*>))\/?.*?>/gi, ""); 
                 div.innerHTML = sanitizedMsg; 
             } else {
-                 div.textContent = msg;
+                 div.textContent = msg; // For user messages and loading messages
             }
 
             chatbotMessages.appendChild(div);
@@ -195,14 +285,14 @@
             If the query is unclear or not related to Mahesh, politely state that you can only provide information about him.
             Keep your answers to a maximum of 3-4 sentences unless a list is appropriate (like for skills or projects).
             When mentioning projects or skills, you can list them.
-            When providing contact information, list all available methods.
+            When providing contact information, list all available methods. Make sure email is a mailto link and LinkedIn/GitHub are clickable links (e.g., <a href='LINK' target='_blank' class='text-sky-600 hover:underline'>TEXT</a>).
 
             Information about Chitikeshi Mahesh:
             Name: ${maheshInfo.name}
             Role: ${maheshInfo.role}
             Introduction: ${maheshInfo.introduction}
             Skills: ${maheshInfo.skills.join(", ")}.
-            Projects: ${maheshInfo.projects.map(p => `${p.name} - ${p.description}`).join("; ")}.
+            Projects: ${maheshInfo.projects.map(p => `<strong>${p.name}</strong>: ${p.description}`).join("<br><br>")}.
             Achievements: ${maheshInfo.achievements.join(". ")}.
             Contact: Email - ${maheshInfo.contact.email}, LinkedIn - ${maheshInfo.contact.linkedin}, GitHub - ${maheshInfo.contact.github}.
             Aspirations: ${maheshInfo.aspirations}
@@ -210,9 +300,10 @@
             User's query: "${userInput}"
 
             Based on this information and the user's query, provide a helpful and professional response.
+            Format lists (like projects or skills) clearly, perhaps using bullet points (<ul><li>Item</li></ul>) or line breaks (<br>) if appropriate.
             If the user asks for "projects", list a few key projects with brief descriptions.
             If the user asks for "skills", list key skills.
-            If the user asks for "contact", provide all contact details clearly, making sure email is a mailto link and LinkedIn/GitHub are clickable links (e.g., <a href='LINK' target='_blank'>TEXT</a>).
+            If the user asks for "contact", provide all contact details clearly, ensuring links are active and styled.
             If the user says "hi", "hello", or "who are you", respond with a brief introduction of yourself as Portfolio Assistant and offer help.
             If the query is very generic or seems like small talk beyond a greeting, try to gently steer the conversation back to Mahesh's professional profile.
             For example, if the user says "how are you?", you can say "I'm functioning optimally, ready to tell you more about Mahesh! What are you interested in?"
@@ -220,17 +311,17 @@
 
             const lowerInput = userInput.toLowerCase();
             if (lowerInput.includes("project")) {
-                prompt += "\nPlease focus on Mahesh's projects in your response, perhaps listing 2-3 with their descriptions.";
+                prompt += "\nPlease focus on Mahesh's projects in your response, perhaps listing 2-3 with their descriptions, using bold for project names.";
             } else if (lowerInput.includes("skill")) {
-                prompt += "\nPlease highlight Mahesh's key skills.";
+                prompt += "\nPlease highlight Mahesh's key skills, possibly as a list.";
             } else if (lowerInput.includes("contact") || lowerInput.includes("email") || lowerInput.includes("linkedin")) {
-                prompt += "\nPlease provide Mahesh's contact information, ensuring links are active.";
+                prompt += "\nPlease provide Mahesh's contact information, ensuring links are active and clearly presented.";
             } else if (lowerInput.includes("who are you") || lowerInput.match(/\b(hi|hello|hey)\b/i)) {
                  prompt = `You are "Portfolio Assistant". The user said: "${userInput}". Respond with a friendly greeting and offer to provide information about Mahesh.`;
             }
 
 
-            const apiKey = ""; 
+            const apiKey = ""; // API key will be injected by the environment
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
@@ -258,9 +349,18 @@
                     result.candidates[0].content && result.candidates[0].content.parts &&
                     result.candidates[0].content.parts.length > 0) {
                     let botText = result.candidates[0].content.parts[0].text;
-                    botText = botText.replace(/ (https?:\/\/[^\s]+)/g, ' <a href="$1" target="_blank">$1</a>');
-                    botText = botText.replace(/<([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)>/g, '<a href="mailto:$1">$1</a>');
-
+                    // Ensure links are correctly formatted if the API returns them as plain text
+                    // Regex for general URLs
+                    botText = botText.replace(/(?<!href=['"])(https?:\/\/[^\s<]+)/g, (match) => {
+                        // Avoid re-wrapping if it's already part of an <a> tag's text content that looks like a URL
+                        if (match.includes("linkedin.com") || match.includes("github.com")) {
+                             return `<a href="${match}" target="_blank" class="text-sky-600 hover:underline">${match}</a>`;
+                        }
+                        return match; // Or simply return match if it's not a social link you want to specifically style
+                    });
+                    // Regex for emails
+                    botText = botText.replace(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/g, '<a href="mailto:$1" class="text-sky-600 hover:underline">$1</a>');
+                    
                     addMessage(botText, "bot");
                 } else {
                     console.error("Unexpected API response structure:", result);
