@@ -25,6 +25,7 @@
         }
         #chatbot-messages::-webkit-scrollbar-thumb:hover {
             background: #555;
+            border-radius: 10px;
         }
         .fade-in {
             animation: fadeIn 0.3s ease-out;
@@ -73,7 +74,7 @@
             </div>
 
             <div id="chatbot-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50">
-                </div>
+            </div>
 
             <div class="p-3 border-t border-slate-200 bg-white">
                 <div class="flex items-center space-x-2">
@@ -88,12 +89,28 @@
         </div>
     </div>
 
+    <script>
+        // IMPORTANT: Replace "YOUR_GEMINI_API_KEY" with your actual Gemini API Key
+        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"; 
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1iij4QWlxQJJPS-yJrhSiCS79kS4dqaM",
+            authDomain: "portfolio-56be7.firebaseapp.com",
+            projectId: "portfolio-56be7",
+            storageBucket: "portfolio-56be7.firebasestorage.app",
+            messagingSenderId: "888511551571",
+            appId: "1:888511551571:web:11e809e995377e9a4ccea6",
+            measurementId: "G-X3CYL9YZR1"
+        };
+
+        // Set this if you have a custom token to use for authentication, otherwise leave as null
+        const initialAuthToken = null; 
+    </script>
+
     <script type="module">
-        // Firebase SDK imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Function to display a custom styled notification for authentication status
         function showAuthNotification(message, isError = true) {
             const notificationId = 'auth-notification-popup';
             let notificationDiv = document.getElementById(notificationId);
@@ -128,20 +145,11 @@
             document.body.appendChild(notificationDiv);
         }
 
-        const firebaseConfigJSON = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-        let firebaseConfig = {};
-        try {
-            firebaseConfig = JSON.parse(firebaseConfigJSON);
-        } catch (e) {
-            console.error("Failed to parse Firebase config:", e);
-        }
-        
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         let app;
         let auth;
 
-        if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey) {
+        // Access the globally defined firebaseConfig and initialAuthToken
+        if (typeof firebaseConfig !== 'undefined' && Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey) {
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
@@ -185,7 +193,7 @@
                 });
             } catch (e) {
                 console.error("Firebase initialization error:", e);
-                 showAuthNotification(`This page is not configured correctly (Firebase init error: ${e.message}). Authentication features will not work.`, true);
+                showAuthNotification(`This page is not configured correctly (Firebase init error: ${e.message}). Authentication features will not work.`, true);
             }
         } else {
             console.error("Firebase configuration is missing or invalid. Chatbot and authentication will not function.");
@@ -270,12 +278,13 @@
                     div.classList.add("bg-slate-200", "text-slate-700", "self-start", "rounded-bl-none");
                 }
                 
+                // Sanitize bot messages to prevent script injection but allow specific HTML for formatting
                 if (sender === "bot" && !isLoading) {
                     const sanitizedMsg = msg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") 
-                                           .replace(/<(?!\/?(a|ul|li|strong|em|br|p|div|span|b|i)(?=>|\s.*>))\/?.*?>/gi, ""); 
+                                         .replace(/<(?!\/?(a|ul|li|strong|em|br|p|div|span|b|i)(?=>|\s.*>))\/?.*?>/gi, ""); 
                     div.innerHTML = sanitizedMsg; 
                 } else {
-                    div.textContent = msg; 
+                    div.textContent = msg; // For user messages or loading states, use textContent
                 }
 
                 chatbotMessages.appendChild(div);
@@ -287,7 +296,7 @@
 
             function showTypingIndicator() {
                 if (typingIndicatorElement) typingIndicatorElement.remove(); 
-                typingIndicatorElement = addMessage("Portfolio Assistant is processing your request...", "bot", true); // Changed thinking to processing
+                typingIndicatorElement = addMessage("Portfolio Assistant is processing your request...", "bot", true); 
             }
 
             function removeTypingIndicator() {
@@ -341,7 +350,7 @@ If a query is overly general or constitutes small talk beyond a standard greetin
                 }
 
 
-                const apiKey = ""; 
+                const apiKey = GEMINI_API_KEY; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
