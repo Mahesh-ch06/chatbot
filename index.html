@@ -33,11 +33,12 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Styles for the auth notification */
-        #auth-notification-popup {
-            /* Ensures it's above other content, including the chatbot icon if it were visible */
-            z-index: 10000; 
+        /* Styles for the auth notification popup animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.95); }
+            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
         }
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-700 text-white">
@@ -61,7 +62,7 @@
             </svg>
         </div>
 
-        <div id="chatbot-box" class="hidden fixed bottom-24 right-5 w-full max-w-md h-[70vh] max-h-[550px] bg-white text-slate-800 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300 fade-in">
+        <div id="chatbot-box" class="hidden fixed bottom-24 right-5 w-full max-w-md h-[70vh] max-h-[550px] bg-white text-slate-800 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-300">
             <div class="bg-sky-500 text-white p-4 flex justify-between items-center">
                 <h3 class="font-semibold text-lg">Portfolio Assistant</h3>
                 <button id="chatbot-close-btn" class="text-white hover:text-sky-200">
@@ -89,318 +90,337 @@
 
     <script type="module">
         // Firebase SDK imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // Firebase configuration (as provided by user)
-        const firebaseConfig = {
-            apiKey: "AIzaSyD1iij4QWlxQJJPS-yJrhSiCS79kS4dqaM", // IMPORTANT: Keep API keys secure and consider environment variables for production.
-            authDomain: "portfolio-56be7.firebaseapp.com",
-            projectId: "portfolio-56be7",
-            storageBucket: "portfolio-56be7.firebasestorage.app",
-            messagingSenderId: "888511551571",
-            appId: "1:888511551571:web:11e809e995377e9a4ccea6",
-            measurementId: "G-X3CYL9YZR1"
-        };
-
-        // Initialize Firebase app
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        // Function to display a custom styled notification
-        function showAuthNotification(message) {
+        // Function to display a custom styled notification for authentication status
+        function showAuthNotification(message, isError = true) {
             const notificationId = 'auth-notification-popup';
             let notificationDiv = document.getElementById(notificationId);
 
-            // Avoid creating multiple popups if function is somehow called again before redirect
-            if (notificationDiv) return; 
+            if (notificationDiv && notificationDiv.querySelector('p.text-md')?.textContent === message) return;
+            if (notificationDiv) notificationDiv.remove(); 
 
             notificationDiv = document.createElement('div');
             notificationDiv.id = notificationId;
-            // Tailwind classes for styling the overlay and message box
-            notificationDiv.className = 'fixed inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center p-6'; // z-index is handled by inline style for override
-            
+            notificationDiv.className = 'fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center p-6';
+            notificationDiv.style.zIndex = '10000';
+
             const messageBox = document.createElement('div');
-            messageBox.className = 'bg-white p-8 rounded-xl shadow-2xl text-slate-800 max-w-lg text-center transform transition-all scale-95 opacity-0 animate-fadeInUp';
+            messageBox.className = 'bg-white p-8 rounded-xl shadow-2xl text-slate-800 max-w-lg text-center animate-fadeInUp'; 
+
             messageBox.innerHTML = `
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-sky-100 mb-6">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full ${isError ? 'bg-red-100' : 'bg-sky-100'} mb-6">
+                    ${isError ? `
+                    <svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>` : `
                     <svg class="h-8 w-8 text-sky-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                     </svg>
+                    `}
                 </div>
-                <h2 class="text-2xl font-bold text-sky-700 mb-3">Authentication Required</h2>
+                <h2 class="text-2xl font-bold ${isError ? 'text-red-700' : 'text-sky-700'} mb-3">${isError ? 'Authentication Issue' : 'Authentication Required'}</h2>
                 <p class="text-md text-slate-600 mb-5">${message}</p>
-                <p class="text-sm text-slate-500 animate-pulse">Redirecting you to the login page shortly...</p>
+                ${isError ? '<p class="text-sm text-slate-500 animate-pulse">You might be redirected or need to refresh...</p>' : '<p class="text-sm text-slate-500 animate-pulse">Attempting to sign you in...</p>'}
             `;
-            
-            // Simple animation for the box
-            const styleSheet = document.createElement("style");
-            styleSheet.type = "text/css";
-            styleSheet.innerText = `
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.95); }
-                    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-                }
-                .animate-fadeInUp { animation: fadeInUp 0.5s ease-out forwards; }
-            `;
-            document.head.appendChild(styleSheet);
-            
             notificationDiv.appendChild(messageBox);
             document.body.appendChild(notificationDiv);
         }
 
-        // Firebase authentication state listener
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                // User is not logged in
-                console.log("User not authenticated. Redirecting to login page.");
-                showAuthNotification("Please log in or create an account to access this portfolio page.");
-                
-                // Delay redirection slightly to allow user to see the message
-                setTimeout(() => {
-                    window.location.href = "https://mahesh06.me/demo2/";
-                }, 3000); // 3-second delay
-            } else {
-                // User is logged in
-                console.log("User authenticated:", user.uid);
-                // You can optionally remove the notification if it was somehow shown
-                const notificationDiv = document.getElementById('auth-notification-popup');
-                if (notificationDiv) {
-                    notificationDiv.remove();
-                }
+        const firebaseConfigJSON = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        let firebaseConfig = {};
+        try {
+            firebaseConfig = JSON.parse(firebaseConfigJSON);
+        } catch (e) {
+            console.error("Failed to parse Firebase config:", e);
+        }
+        
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app;
+        let auth;
+
+        if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                console.log("Firebase initialized.");
+
+                onAuthStateChanged(auth, (user) => {
+                    if (!user) {
+                        console.log("User not authenticated. Attempting to sign in.");
+                        (async () => {
+                            try {
+                                if (initialAuthToken) {
+                                    console.log("Attempting sign in with custom token.");
+                                    showAuthNotification("Authenticating with custom token...", false);
+                                    await signInWithCustomToken(auth, initialAuthToken);
+                                } else {
+                                    console.log("No custom token, attempting anonymous sign in.");
+                                    showAuthNotification("Attempting anonymous sign-in...", false);
+                                    await signInAnonymously(auth);
+                                }
+                            } catch (error) {
+                                console.error("Error during automated sign-in:", error);
+                                showAuthNotification(`Sign-in failed: ${error.message}. You will be redirected to the login page.`, true);
+                                setTimeout(() => {
+                                    window.location.href = "https://mahesh06.me/demo2/"; 
+                                }, 4000);
+                            }
+                        })();
+                    } else {
+                        console.log("User authenticated:", user.uid);
+                        const notificationDiv = document.getElementById('auth-notification-popup');
+                        if (notificationDiv) {
+                            notificationDiv.remove();
+                        }
+                        if (window.initializeChatbotApp) {
+                            window.initializeChatbotApp(auth.currentUser);
+                        } else {
+                            console.error("Chatbot initialization function (initializeChatbotApp) not found.");
+                            showAuthNotification("Failed to initialize application components after login.", true);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Firebase initialization error:", e);
+                 showAuthNotification(`This page is not configured correctly (Firebase init error: ${e.message}). Authentication features will not work.`, true);
             }
-        });
+        } else {
+            console.error("Firebase configuration is missing or invalid. Chatbot and authentication will not function.");
+            showAuthNotification("This page is not configured correctly (missing Firebase setup). Authentication features will not work.", true);
+        }
     </script>
 
     <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const chatbotIcon = document.getElementById("chatbot-icon");
-        const chatbotBox = document.getElementById("chatbot-box");
-        const chatbotCloseBtn = document.getElementById("chatbot-close-btn");
-        const chatbotMessages = document.getElementById("chatbot-messages");
-        const chatbotInput = document.getElementById("chatbot-input");
-        const chatbotSendBtn = document.getElementById("chatbot-send-btn");
+        window.initializeChatbotApp = function(currentUser) {
+            console.log("Initializing chatbot app for user:", currentUser ? currentUser.uid : 'anonymous/unknown');
 
-        // Information about Chitikeshi Mahesh (This will be used to inform the AI)
-        const maheshInfo = {
-            name: "Chitikeshi Mahesh",
-            role: "B.Tech CSE (AI & ML) student at SR University.",
-            introduction: "Chitikeshi Mahesh is a dedicated and aspiring software developer with a strong foundation in Computer Science, specializing in Artificial Intelligence and Machine Learning. He is passionate about leveraging technology to solve real-world problems and continuously seeks to expand his knowledge and skills.",
-            skills: [
-                "Python", "Java", "C++",
-                "Web Development (HTML, CSS, JavaScript, React.js, Node.js)",
-                "Data Structures and Algorithms (DSA)",
-                "Machine Learning (Scikit-learn, TensorFlow, Keras)",
-                "Deep Learning",
-                "Database Management (SQL, MongoDB)",
-                "Version Control (Git, GitHub)",
-                "Problem Solving"
-            ],
-            projects: [
-                { name: "Personal Portfolio Website", description: "Developed a dynamic personal portfolio website (this one!) to showcase skills, projects, and achievements, featuring an AI-powered chatbot for interactive user engagement." },
-                { name: "DSA Resource Hub", description: "Created a comprehensive web platform offering curated resources, tutorials, and practice problems for Data Structures and Algorithms, aimed at helping students learn and prepare for technical interviews." },
-                { name: "Intelligent Diary Web Application", description: "Built a web application that allows users to maintain a personal diary with features like sentiment analysis on entries and smart tagging for organization." },
-                { name: "E-commerce Price Tracker", description: "Developed a tool that tracks prices of products on various e-commerce sites and notifies users of price drops." }
-            ],
-            achievements: [
-                "Secured 2nd place in Anveshan Hackathon for an innovative AI-based project.",
-                "Received Academic Excellence Award for outstanding performance in university.",
-                "Project recognized at the University Innovation Expo for its practical application and technical sophistication.",
-                "Consistently ranked among top 5% of students in the department."
-            ],
-            contact: {
-                email: "chitikeshimahesh6@gmail.com",
-                linkedin: "https://www.linkedin.com/in/chitikeshimahesh/",
-                github: "https://github.com/chitikeshimahesh"
-            },
-            aspirations: "Aspires to contribute to cutting-edge AI research and develop impactful software solutions that can make a difference. Keen on exploring roles in software engineering, machine learning, and data science."
-        };
+            const chatbotIcon = document.getElementById("chatbot-icon");
+            const chatbotBox = document.getElementById("chatbot-box");
+            const chatbotCloseBtn = document.getElementById("chatbot-close-btn");
+            const chatbotMessages = document.getElementById("chatbot-messages");
+            const chatbotInput = document.getElementById("chatbot-input");
+            const chatbotSendBtn = document.getElementById("chatbot-send-btn");
 
-        function getGreetingMessage() {
-            const hr = new Date().getHours();
-            if (hr < 12) return "Good morning! 👋 I'm Portfolio Assistant. How can I help you learn more about Mahesh today?";
-            if (hr < 18) return "Good afternoon! 👋 I'm Portfolio Assistant. How can I assist you in finding out about Mahesh?";
-            return "Good evening! 👋 I'm Portfolio Assistant. What would you like to know about Mahesh?";
-        }
+            const maheshInfo = {
+                name: "Chitikeshi Mahesh",
+                role: "B.Tech CSE (AI & ML) student at SR University.",
+                introduction: "Chitikeshi Mahesh is a dedicated and aspiring software developer with a strong foundation in Computer Science, specializing in Artificial Intelligence and Machine Learning. He is passionate about leveraging technology to solve real-world problems and continuously seeks to expand his knowledge and skills.",
+                skills: [
+                    "Python", "Java", "C++",
+                    "Web Development (HTML, CSS, JavaScript, React.js, Node.js)",
+                    "Data Structures and Algorithms (DSA)",
+                    "Machine Learning (Scikit-learn, TensorFlow, Keras)",
+                    "Deep Learning",
+                    "Database Management (SQL, MongoDB)",
+                    "Version Control (Git, GitHub)",
+                    "Problem Solving"
+                ],
+                projects: [
+                    { name: "Personal Portfolio Website", description: "Developed a dynamic personal portfolio website (this one!) to showcase skills, projects, and achievements, featuring an AI-powered chatbot for interactive user engagement." },
+                    { name: "DSA Resource Hub", description: "Created a comprehensive web platform offering curated resources, tutorials, and practice problems for Data Structures and Algorithms, aimed at helping students learn and prepare for technical interviews." },
+                    { name: "Intelligent Diary Web Application", description: "Built a web application that allows users to maintain a personal diary with features like sentiment analysis on entries and smart tagging for organization." },
+                    { name: "E-commerce Price Tracker", description: "Developed a tool that tracks prices of products on various e-commerce sites and notifies users of price drops." }
+                ],
+                achievements: [
+                    "Secured 2nd place in Anveshan Hackathon for an innovative AI-based project.",
+                    "Received Academic Excellence Award for outstanding performance in university.",
+                    "Project recognized at the University Innovation Expo for its practical application and technical sophistication.",
+                    "Consistently ranked among top 5% of students in the department."
+                ],
+                contact: {
+                    email: "chitikeshimahesh6@gmail.com",
+                    linkedin: "https://www.linkedin.com/in/chitikeshimahesh/",
+                    github: "https://github.com/chitikeshimahesh"
+                },
+                aspirations: "Aspires to contribute to cutting-edge AI research and develop impactful software solutions that can make a difference. Keen on exploring roles in software engineering, machine learning, and data science."
+            };
 
-        function toggleChat() {
-            const isChatBoxHidden = chatbotBox.classList.contains("hidden");
-            if (isChatBoxHidden) {
-                chatbotBox.classList.remove("hidden");
-                chatbotIcon.style.display = "none";
-                if (chatbotMessages.children.length === 0) { 
-                    addMessage(getGreetingMessage(), "bot");
-                }
-            } else {
-                chatbotBox.classList.add("hidden");
-                chatbotIcon.style.display = "flex";
-            }
-        }
-
-        function addMessage(msg, sender = "bot", isLoading = false) {
-            const div = document.createElement("div");
-            div.className = `chat-message p-3 rounded-xl max-w-[85%] break-words ${isLoading ? 'italic text-slate-500' : ''}`;
-            
-            if (sender === "user") {
-                div.classList.add("bg-sky-500", "text-white", "self-end", "rounded-br-none");
-            } else {
-                div.classList.add("bg-slate-200", "text-slate-700", "self-start", "rounded-bl-none");
-            }
-            
-            if (sender === "bot" && !isLoading) {
-                // Basic sanitization for HTML content from bot
-                const sanitizedMsg = msg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") 
-                                       .replace(/<(?!\/?(a|ul|li|strong|em|br|p|div|span)(?=>|\s.*>))\/?.*?>/gi, ""); 
-                div.innerHTML = sanitizedMsg; 
-            } else {
-                 div.textContent = msg; // For user messages and loading messages
+            function getGreetingMessage() {
+                const hr = new Date().getHours();
+                if (hr < 12) return "Good morning. I am the Portfolio Assistant for Chitikeshi Mahesh. How may I help you learn more about his profile today?";
+                if (hr < 18) return "Good afternoon. I am the Portfolio Assistant for Chitikeshi Mahesh. How may I assist you regarding his profile?";
+                return "Good evening. I am the Portfolio Assistant for Chitikeshi Mahesh. What information can I provide about his profile?";
             }
 
-            chatbotMessages.appendChild(div);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            return div;
-        }
-        
-        let typingIndicatorElement = null;
-
-        function showTypingIndicator() {
-            if (typingIndicatorElement) typingIndicatorElement.remove(); 
-            typingIndicatorElement = addMessage("Portfolio Assistant is thinking...", "bot", true);
-        }
-
-        function removeTypingIndicator() {
-            if (typingIndicatorElement) {
-                typingIndicatorElement.remove();
-                typingIndicatorElement = null;
-            }
-        }
-
-        async function getBotResponse(userInput) {
-            showTypingIndicator();
-
-            let prompt = `You are "Portfolio Assistant", a highly professional and helpful AI assistant for Chitikeshi Mahesh's portfolio.
-            Your goal is to provide concise, informative, and engaging answers about him.
-            You should maintain a polite and professional tone.
-            Use the information provided below about Chitikeshi Mahesh to answer the user's query.
-            If the query is unclear or not related to Mahesh, politely state that you can only provide information about him.
-            Keep your answers to a maximum of 3-4 sentences unless a list is appropriate (like for skills or projects).
-            When mentioning projects or skills, you can list them.
-            When providing contact information, list all available methods. Make sure email is a mailto link and LinkedIn/GitHub are clickable links (e.g., <a href='LINK' target='_blank' class='text-sky-600 hover:underline'>TEXT</a>).
-
-            Information about Chitikeshi Mahesh:
-            Name: ${maheshInfo.name}
-            Role: ${maheshInfo.role}
-            Introduction: ${maheshInfo.introduction}
-            Skills: ${maheshInfo.skills.join(", ")}.
-            Projects: ${maheshInfo.projects.map(p => `<strong>${p.name}</strong>: ${p.description}`).join("<br><br>")}.
-            Achievements: ${maheshInfo.achievements.join(". ")}.
-            Contact: Email - ${maheshInfo.contact.email}, LinkedIn - ${maheshInfo.contact.linkedin}, GitHub - ${maheshInfo.contact.github}.
-            Aspirations: ${maheshInfo.aspirations}
-
-            User's query: "${userInput}"
-
-            Based on this information and the user's query, provide a helpful and professional response.
-            Format lists (like projects or skills) clearly, perhaps using bullet points (<ul><li>Item</li></ul>) or line breaks (<br>) if appropriate.
-            If the user asks for "projects", list a few key projects with brief descriptions.
-            If the user asks for "skills", list key skills.
-            If the user asks for "contact", provide all contact details clearly, ensuring links are active and styled.
-            If the user says "hi", "hello", or "who are you", respond with a brief introduction of yourself as Portfolio Assistant and offer help.
-            If the query is very generic or seems like small talk beyond a greeting, try to gently steer the conversation back to Mahesh's professional profile.
-            For example, if the user says "how are you?", you can say "I'm functioning optimally, ready to tell you more about Mahesh! What are you interested in?"
-            `;
-
-            const lowerInput = userInput.toLowerCase();
-            if (lowerInput.includes("project")) {
-                prompt += "\nPlease focus on Mahesh's projects in your response, perhaps listing 2-3 with their descriptions, using bold for project names.";
-            } else if (lowerInput.includes("skill")) {
-                prompt += "\nPlease highlight Mahesh's key skills, possibly as a list.";
-            } else if (lowerInput.includes("contact") || lowerInput.includes("email") || lowerInput.includes("linkedin")) {
-                prompt += "\nPlease provide Mahesh's contact information, ensuring links are active and clearly presented.";
-            } else if (lowerInput.includes("who are you") || lowerInput.match(/\b(hi|hello|hey)\b/i)) {
-                 prompt = `You are "Portfolio Assistant". The user said: "${userInput}". Respond with a friendly greeting and offer to provide information about Mahesh.`;
-            }
-
-
-            const apiKey = ""; // API key will be injected by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-            
-            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                removeTypingIndicator();
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error("API Error:", errorData);
-                    addMessage("My apologies, I'm having a little trouble connecting right now. Please try again in a moment.", "bot");
-                    return;
-                }
-
-                const result = await response.json();
-
-                if (result.candidates && result.candidates.length > 0 &&
-                    result.candidates[0].content && result.candidates[0].content.parts &&
-                    result.candidates[0].content.parts.length > 0) {
-                    let botText = result.candidates[0].content.parts[0].text;
-                    // Ensure links are correctly formatted if the API returns them as plain text
-                    // Regex for general URLs
-                    botText = botText.replace(/(?<!href=['"])(https?:\/\/[^\s<]+)/g, (match) => {
-                        // Avoid re-wrapping if it's already part of an <a> tag's text content that looks like a URL
-                        if (match.includes("linkedin.com") || match.includes("github.com")) {
-                             return `<a href="${match}" target="_blank" class="text-sky-600 hover:underline">${match}</a>`;
-                        }
-                        return match; // Or simply return match if it's not a social link you want to specifically style
-                    });
-                    // Regex for emails
-                    botText = botText.replace(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/g, '<a href="mailto:$1" class="text-sky-600 hover:underline">$1</a>');
-                    
-                    addMessage(botText, "bot");
+            function toggleChat() {
+                const isChatBoxHidden = chatbotBox.classList.contains("hidden");
+                if (isChatBoxHidden) {
+                    chatbotBox.classList.remove("hidden");
+                    chatbotIcon.style.display = "none"; 
+                    if (chatbotMessages.children.length === 0) { 
+                        addMessage(getGreetingMessage(), "bot");
+                    }
+                    chatbotInput.focus(); 
                 } else {
-                    console.error("Unexpected API response structure:", result);
-                    addMessage("I received an unusual response. Could you try rephrasing your question?", "bot");
+                    chatbotBox.classList.add("hidden");
+                    chatbotIcon.style.display = "flex"; 
+                }
+            }
+
+            function addMessage(msg, sender = "bot", isLoading = false) {
+                const div = document.createElement("div");
+                div.className = `chat-message p-3 rounded-xl max-w-[85%] break-words fade-in ${isLoading ? 'italic text-slate-500' : ''}`;
+                
+                if (sender === "user") {
+                    div.classList.add("bg-sky-500", "text-white", "self-end", "rounded-br-none");
+                } else {
+                    div.classList.add("bg-slate-200", "text-slate-700", "self-start", "rounded-bl-none");
+                }
+                
+                if (sender === "bot" && !isLoading) {
+                    const sanitizedMsg = msg.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") 
+                                           .replace(/<(?!\/?(a|ul|li|strong|em|br|p|div|span|b|i)(?=>|\s.*>))\/?.*?>/gi, ""); 
+                    div.innerHTML = sanitizedMsg; 
+                } else {
+                    div.textContent = msg; 
                 }
 
-            } catch (error) {
-                removeTypingIndicator();
-                console.error("Error fetching bot response:", error);
-                addMessage("Sorry, I encountered an error. Please try asking again.", "bot");
+                chatbotMessages.appendChild(div);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+                return div;
             }
-        }
+            
+            let typingIndicatorElement = null;
 
-        function handleSend() {
-            const userMsg = chatbotInput.value.trim();
-            if (!userMsg) return;
-
-            addMessage(userMsg, "user");
-            chatbotInput.value = "";
-            chatbotInput.focus();
-
-            getBotResponse(userMsg);
-        }
-
-        chatbotIcon.addEventListener("click", toggleChat);
-        chatbotCloseBtn.addEventListener("click", toggleChat);
-        chatbotSendBtn.addEventListener("click", handleSend);
-        chatbotInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault(); 
-                handleSend();
+            function showTypingIndicator() {
+                if (typingIndicatorElement) typingIndicatorElement.remove(); 
+                typingIndicatorElement = addMessage("Portfolio Assistant is processing your request...", "bot", true); // Changed thinking to processing
             }
-        });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === "Escape" && !chatbotBox.classList.contains("hidden")) {
-                toggleChat();
+            function removeTypingIndicator() {
+                if (typingIndicatorElement) {
+                    typingIndicatorElement.remove();
+                    typingIndicatorElement = null;
+                }
             }
-        });
-    });
+
+            async function getBotResponse(userInput) {
+                showTypingIndicator();
+
+                let prompt = `You are "Portfolio Assistant", a sophisticated, articulate, and professional AI assistant dedicated to Chitikeshi Mahesh's portfolio.
+Your primary objective is to deliver concise, accurate, and engaging information about Mr. Mahesh.
+It is imperative that you maintain a consistently polite, formal, and professional tone in all interactions. Avoid colloquialisms or overly casual language.
+Utilize the comprehensive information provided below concerning Chitikeshi Mahesh to address the user's inquiry.
+Should a query be ambiguous or unrelated to Mr. Mahesh, politely clarify that your function is to provide information specifically about his professional profile.
+Strive for clarity and precision. Responses should generally be limited to 3-4 sentences, unless presenting lists (e.g., skills or projects), which should be formatted clearly using HTML (<ul><li>Item</li></ul> or <br> for separation).
+When providing contact details, ensure all methods are listed. Email addresses must be formatted as mailto links, and LinkedIn/GitHub URLs as clickable HTML links opening in a new tab (e.g., <a href='LINK' target='_blank' class='text-sky-600 hover:underline'>TEXT</a>).
+
+Information about Chitikeshi Mahesh:
+Name: ${maheshInfo.name}
+Role: ${maheshInfo.role}
+Introduction: ${maheshInfo.introduction}
+Skills: ${maheshInfo.skills.join(", ")}.
+Projects: ${maheshInfo.projects.map(p => `<strong>${p.name}</strong>: ${p.description}`).join("<br><br>")}.
+Achievements: ${maheshInfo.achievements.join(". ")}.
+Contact: Email - ${maheshInfo.contact.email}, LinkedIn - ${maheshInfo.contact.linkedin}, GitHub - ${maheshInfo.contact.github}.
+Aspirations: ${maheshInfo.aspirations}
+
+User's query: "${userInput}"
+
+Based on this information and the user's query, construct a helpful and professional response.
+Format lists (e.g., projects or skills) with clarity, using appropriate HTML elements.
+For inquiries about "projects", present a selection of key projects with concise descriptions, emphasizing project names with <strong>.
+For inquiries about "skills", enumerate pertinent skills, potentially as an HTML list.
+For inquiries about "contact", furnish all contact details with precision, ensuring links are functional, correctly styled, and set to open in a new browser tab.
+If the user offers a greeting (e.g., "hi", "hello") or asks "who are you", respond with a formal introduction of yourself as the Portfolio Assistant and offer your services regarding Mr. Mahesh's profile.
+If a query is overly general or constitutes small talk beyond a standard greeting (e.g., "how are you?"), gently redirect the conversation towards Mr. Mahesh's professional attributes. For instance: "I am operating effectively and am ready to provide information regarding Mr. Mahesh's profile. How may I assist you further?"
+`;
+
+                const lowerInput = userInput.toLowerCase();
+                if (lowerInput.includes("project")) {
+                    prompt += "\nPlease focus your response on Mr. Mahesh's projects, detailing 2-3 key examples with their descriptions. Use HTML bold tags for project names and consider HTML lists for clarity.";
+                } else if (lowerInput.includes("skill")) {
+                    prompt += "\nPlease highlight Mr. Mahesh's key skills, presenting them clearly, perhaps utilizing an HTML list format.";
+                } else if (lowerInput.includes("contact") || lowerInput.includes("email") || lowerInput.includes("linkedin") || lowerInput.includes("github")) {
+                    prompt += "\nPlease provide Mr. Mahesh's contact information. Ensure all links are active, correctly styled, and configured to open in a new tab.";
+                } else if (lowerInput.includes("who are you") || lowerInput.match(/\b(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/i)) {
+                    prompt = `You are "Portfolio Assistant". The user has initiated with: "${userInput}". Respond with a formal and courteous greeting, introducing yourself as the Portfolio Assistant for Chitikeshi Mahesh, and inquire how you may be of service regarding his profile. For example: "Greetings. I am the Portfolio Assistant for Chitikeshi Mahesh. How may I assist you with information about his profile today?"`;
+                }
+
+
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                
+                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                const payload = { contents: chatHistory };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    removeTypingIndicator();
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error("API Error Status:", response.status, "Response:", errorText);
+                        let displayError = `Error ${response.status}: ${response.statusText}`;
+                        try {
+                            const errorData = JSON.parse(errorText);
+                            if (errorData.error && errorData.error.message) {
+                                displayError = errorData.error.message;
+                            }
+                        } catch (e) { /* Ignore if not JSON */ }
+                        addMessage(`My apologies, an issue was encountered while attempting to connect: ${displayError}. Please try again shortly.`, "bot");
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        let botText = result.candidates[0].content.parts[0].text;
+                        addMessage(botText, "bot");
+                    } else if (result.promptFeedback && result.promptFeedback.blockReason) {
+                        console.error("API request blocked:", result.promptFeedback.blockReason, result.promptFeedback.safetyRatings);
+                        addMessage("I regret that I am unable to process that request due to content policy. Kindly rephrase your query regarding Mr. Mahesh.", "bot");
+                    } else {
+                        console.error("Unexpected API response structure:", result);
+                        addMessage("An unusual response was received. Could you please rephrase your question?", "bot");
+                    }
+
+                } catch (error) {
+                    removeTypingIndicator();
+                    console.error("Error fetching bot response:", error);
+                    addMessage("I am sorry, an error occurred while connecting to the AI service. Please verify your internet connection or attempt your query again later.", "bot");
+                }
+            }
+
+            function handleSend() {
+                const userMsg = chatbotInput.value.trim();
+                if (!userMsg) return;
+
+                addMessage(userMsg, "user");
+                chatbotInput.value = "";
+                chatbotInput.focus();
+
+                getBotResponse(userMsg);
+            }
+
+            // Event Listeners
+            if (chatbotIcon) chatbotIcon.addEventListener("click", toggleChat);
+            if (chatbotCloseBtn) chatbotCloseBtn.addEventListener("click", toggleChat);
+            if (chatbotSendBtn) chatbotSendBtn.addEventListener("click", handleSend);
+            if (chatbotInput) chatbotInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) { 
+                    e.preventDefault(); 
+                    handleSend();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === "Escape" && chatbotBox && !chatbotBox.classList.contains("hidden")) {
+                    toggleChat();
+                }
+            });
+            console.log("Chatbot app UI initialized and event listeners attached.");
+        }; 
     </script>
 </body>
 </html>
